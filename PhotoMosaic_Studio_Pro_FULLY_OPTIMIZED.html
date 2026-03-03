@@ -1,0 +1,1946 @@
+Remove TMDB from the image source options for this web-based photomosaic app. Also read and analyze the Screencaps from a previous conversation with kimi. Evaluate and then impliment the ideas agreed upon, plus integrate the web workers (option b) at the same time,  and provide me with the full updated html file for the app.  
+ Here's the code as it is so far: 
+<!DOCTYPE html>
+<html lang="en">
+<head>
+   <meta charset="UTF-8">
+   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+   <meta name="apple-mobile-web-app-capable" content="yes">
+   <title>PhotoMosaic Studio Pro</title>
+   <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap   " rel="stylesheet">
+   <style>
+       :root {
+           --cyan: #00d9ff;
+           --red: #e60026;
+           --yellow: #ffff66;
+           --black: #0a0a0a;
+           --white: #ffffff;
+           --dark-gray: #1a1a2e;
+           --green: #10b981;
+           --purple: #8b5cf6;
+           --orange: #f97316;
+       }
+
+       * {
+           margin: 0;
+           padding: 0;
+           box-sizing: border-box;
+           -webkit-tap-highlight-color: transparent;
+           touch-action: manipulation;
+       }
+
+       html {
+           height: 100%;
+           height: -webkit-fill-available;
+           overflow-x: hidden;
+       }
+
+       body {
+           font-family: 'VT323', monospace;
+           background: var(--black);
+           color: var(--white);
+           min-height: 100vh;
+           min-height: -webkit-fill-available;
+           overflow-x: hidden;
+           display: flex;
+           flex-direction: column;
+           padding-top: env(safe-area-inset-top);
+           padding-bottom: env(safe-area-inset-bottom);
+           position: relative;
+           width: 100%;
+           max-width: 100vw;
+           touch-action: pan-y pinch-zoom;
+       }
+
+       /* Header */
+       .game-header {
+           background: var(--cyan);
+           color: var(--black);
+           padding: 12px 16px;
+           text-align: center;
+           border-bottom: 4px solid var(--white);
+           position: sticky;
+           top: 0;
+           z-index: 100;
+           flex-shrink: 0;
+           display: flex;
+           align-items: center;
+           justify-content: space-between;
+           width: 100%;
+           max-width: 100vw;
+       }
+
+       .game-header h1 {
+           font-family: 'Press Start 2P', cursive;
+           font-size: clamp(0.7rem, 3.5vw, 1rem);
+           line-height: 1.4;
+           text-transform: uppercase;
+           letter-spacing: 1px;
+           text-shadow: 2px 2px 0 var(--white);
+           flex: 1;
+           text-align: center;
+       }
+
+       .menu-btn {
+           background: var(--black);
+           border: 2px solid var(--white);
+           color: var(--white);
+           padding: 8px 12px;
+           font-family: 'Press Start 2P', cursive;
+           font-size: 0.6rem;
+           cursor: pointer;
+           transition: all 0.2s;
+           box-shadow: 0 4px 0 var(--white);
+           touch-action: manipulation;
+       }
+
+       .menu-btn:active {
+           transform: translateY(4px);
+           box-shadow: 0 0 0 var(--white);
+       }
+
+       /* Side Menu */
+       .side-menu {
+           position: fixed;
+           top: 0;
+           left: -100%;
+           width: 85%;
+           max-width: 400px;
+           height: 100%;
+           background: var(--dark-gray);
+           border-right: 4px solid var(--cyan);
+           z-index: 200;
+           transition: left 0.3s ease;
+           overflow-y: auto;
+           overflow-x: hidden;
+           padding: 20px;
+           touch-action: pan-y;
+       }
+
+       .side-menu.open {
+           left: 0;
+       }
+
+       .menu-overlay {
+           position: fixed;
+           top: 0;
+           left: 0;
+           right: 0;
+           bottom: 0;
+           background: rgba(0, 0, 0, 0.8);
+           z-index: 150;
+           opacity: 0;
+           pointer-events: none;
+           transition: opacity 0.3s;
+           touch-action: none;
+       }
+
+       .menu-overlay.open {
+           opacity: 1;
+           pointer-events: all;
+       }
+
+       .menu-header {
+           display: flex;
+           justify-content: space-between;
+           align-items: center;
+           margin-bottom: 24px;
+           padding-bottom: 16px;
+           border-bottom: 2px solid var(--cyan);
+       }
+
+       .menu-title {
+           font-family: 'Press Start 2P', cursive;
+           font-size: 0.8rem;
+           color: var(--yellow);
+       }
+
+       .menu-close {
+           background: var(--red);
+           border: 2px solid var(--white);
+           color: var(--white);
+           width: 36px;
+           height: 36px;
+           font-size: 1.2rem;
+           cursor: pointer;
+           display: flex;
+           align-items: center;
+           justify-content: center;
+       }
+
+       .menu-section {
+           margin-bottom: 24px;
+       }
+
+       .menu-section-title {
+           font-family: 'Press Start 2P', cursive;
+           font-size: 0.6rem;
+           color: var(--cyan);
+           margin-bottom: 12px;
+           display: flex;
+           align-items: center;
+           gap: 8px;
+       }
+
+       .menu-item {
+           background: var(--black);
+           border: 2px solid var(--white);
+           padding: 16px;
+           margin-bottom: 12px;
+           cursor: pointer;
+           transition: all 0.2s;
+           display: flex;
+           align-items: center;
+           gap: 12px;
+       }
+
+       .menu-item:hover {
+           border-color: var(--yellow);
+           transform: translateX(4px);
+       }
+
+       .menu-item-icon {
+           font-size: 1.5rem;
+       }
+
+       .menu-item-text {
+           flex: 1;
+       }
+
+       .menu-item-title {
+           font-family: 'Press Start 2P', cursive;
+           font-size: 0.55rem;
+           color: var(--white);
+           margin-bottom: 4px;
+       }
+
+       .menu-item-desc {
+           font-size: 0.9rem;
+           color: var(--cyan);
+           opacity: 0.8;
+       }
+
+       /* Help Modal */
+       .help-modal {
+           position: fixed;
+           top: 0;
+           left: 0;
+           right: 0;
+           bottom: 0;
+           background: rgba(10, 10, 10, 0.95);
+           z-index: 300;
+           display: none;
+           overflow-y: auto;
+           overflow-x: hidden;
+           padding: 20px;
+           touch-action: pan-y;
+       }
+
+       .help-modal.open {
+           display: block;
+       }
+
+       .help-content {
+           max-width: 800px;
+           margin: 0 auto;
+           background: var(--dark-gray);
+           border: 4px solid var(--yellow);
+           padding: 24px;
+       }
+
+       .help-header {
+           display: flex;
+           justify-content: space-between;
+           align-items: center;
+           margin-bottom: 24px;
+           padding-bottom: 16px;
+           border-bottom: 4px solid var(--cyan);
+       }
+
+       .help-title {
+           font-family: 'Press Start 2P', cursive;
+           font-size: 1rem;
+           color: var(--yellow);
+       }
+
+       .help-close {
+           background: var(--red);
+           border: 3px solid var(--white);
+           color: var(--white);
+           padding: 12px 16px;
+           font-family: 'Press Start 2P', cursive;
+           font-size: 0.6rem;
+           cursor: pointer;
+       }
+
+       .help-section {
+           margin-bottom: 32px;
+       }
+
+       .help-section-title {
+           font-family: 'Press Start 2P', cursive;
+           font-size: 0.7rem;
+           color: var(--cyan);
+           margin-bottom: 16px;
+           display: flex;
+           align-items: center;
+           gap: 8px;
+       }
+
+       .help-section-title::before {
+           content: '▶';
+           color: var(--red);
+       }
+
+       .help-step {
+           background: var(--black);
+           border: 2px solid var(--white);
+           padding: 16px;
+           margin-bottom: 16px;
+           display: flex;
+           gap: 16px;
+           align-items: flex-start;
+       }
+
+       .step-number {
+           background: var(--cyan);
+           color: var(--black);
+           width: 32px;
+           height: 32px;
+           display: flex;
+           align-items: center;
+           justify-content: center;
+           font-family: 'Press Start 2P', cursive;
+           font-size: 0.7rem;
+           flex-shrink: 0;
+       }
+
+       .step-content h4 {
+           font-family: 'Press Start 2P', cursive;
+           font-size: 0.6rem;
+           color: var(--yellow);
+           margin-bottom: 8px;
+       }
+
+       .step-content p {
+           font-size: 1.1rem;
+           line-height: 1.5;
+           color: var(--white);
+           margin-bottom: 8px;
+       }
+
+       .step-tip {
+           background: rgba(0, 217, 255, 0.1);
+           border-left: 4px solid var(--cyan);
+           padding: 12px;
+           margin-top: 8px;
+           font-size: 1rem;
+           color: var(--cyan);
+       }
+
+       .help-grid {
+           display: grid;
+           grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+           gap: 16px;
+           margin-top: 16px;
+       }
+
+       .help-card {
+           background: var(--black);
+           border: 2px solid var(--white);
+           padding: 16px;
+       }
+
+       .help-card h4 {
+           font-family: 'Press Start 2P', cursive;
+           font-size: 0.6rem;
+           color: var(--yellow);
+           margin-bottom: 8px;
+       }
+
+       .help-card p {
+           font-size: 1rem;
+           color: var(--white);
+           opacity: 0.9;
+       }
+
+       .format-list {
+           display: flex;
+           flex-wrap: wrap;
+           gap: 8px;
+           margin-top: 8px;
+       }
+
+       .format-badge {
+           background: var(--dark-gray);
+           border: 2px solid var(--green);
+           color: var(--green);
+           padding: 4px 8px;
+           font-size: 0.8rem;
+           font-family: 'Press Start 2P', cursive;
+       }
+
+       .warning-box {
+           background: rgba(230, 0, 38, 0.1);
+           border: 2px solid var(--red);
+           padding: 16px;
+           margin: 16px 0;
+       }
+
+       .warning-box h4 {
+           color: var(--red);
+           font-family: 'Press Start 2P', cursive;
+           font-size: 0.6rem;
+           margin-bottom: 8px;
+       }
+
+       /* Main Container */
+       .game-container {
+           flex: 1;
+           display: flex;
+           flex-direction: column;
+           padding: 16px;
+           gap: 16px;
+           overflow-y: auto;
+           overflow-x: hidden;
+           -webkit-overflow-scrolling: touch;
+           width: 100%;
+           max-width: 100vw;
+           touch-action: pan-y;
+       }
+
+       /* Quick Start Banner */
+       .quick-start {
+           background: linear-gradient(135deg, var(--purple) 0%, var(--dark-gray) 100%);
+           border: 4px solid var(--yellow);
+           padding: 20px;
+           margin-bottom: 8px;
+           text-align: center;
+           width: 100%;
+       }
+
+       .quick-start h2 {
+           font-family: 'Press Start 2P', cursive;
+           font-size: 0.8rem;
+           color: var(--yellow);
+           margin-bottom: 12px;
+       }
+
+       .quick-start p {
+           font-size: 1.2rem;
+           color: var(--white);
+           margin-bottom: 16px;
+       }
+
+       .quick-start-btn {
+           background: var(--yellow);
+           color: var(--black);
+           border: none;
+           padding: 16px 24px;
+           font-family: 'Press Start 2P', cursive;
+           font-size: 0.6rem;
+           cursor: pointer;
+           box-shadow: 0 6px 0 #cccc44;
+           touch-action: manipulation;
+       }
+
+       .quick-start-btn:active {
+           transform: translateY(6px);
+           box-shadow: 0 0 0 #cccc44;
+       }
+
+       /* Panels */
+       .panel {
+           background: var(--dark-gray);
+           border: 4px solid var(--white);
+           padding: 16px;
+           position: relative;
+           width: 100%;
+           max-width: 100%;
+       }
+
+       .panel-cyan { border-color: var(--cyan); }
+       .panel-red { border-color: var(--red); }
+       .panel-yellow { border-color: var(--yellow); }
+       .panel-green { border-color: var(--green); }
+       .panel-purple { border-color: var(--purple); }
+
+       .panel-title {
+           font-family: 'Press Start 2P', cursive;
+           font-size: 0.7rem;
+           color: var(--yellow);
+           margin-bottom: 16px;
+           text-transform: uppercase;
+           display: flex;
+           align-items: center;
+           gap: 8px;
+       }
+
+       .panel-title::before {
+           content: '▶';
+           color: var(--red);
+       }
+
+       .panel-help {
+           position: absolute;
+           top: 16px;
+           right: 16px;
+           background: var(--black);
+           border: 2px solid var(--cyan);
+           color: var(--cyan);
+           width: 28px;
+           height: 28px;
+           border-radius: 50%;
+           display: flex;
+           align-items: center;
+           justify-content: center;
+           cursor: pointer;
+           font-size: 0.9rem;
+           transition: all 0.2s;
+       }
+
+       .panel-help:hover {
+           background: var(--cyan);
+           color: var(--black);
+       }
+
+       /* Buttons */
+       .btn {
+           font-family: 'Press Start 2P', cursive;
+           font-size: 0.65rem;
+           padding: 16px 24px;
+           border: none;
+           cursor: pointer;
+           text-transform: uppercase;
+           transition: all 0.1s;
+           width: 100%;
+           margin: 8px 0;
+           position: relative;
+           touch-action: manipulation;
+       }
+
+       .btn:active {
+           transform: translateY(4px);
+       }
+
+       .btn-cyan {
+           background: var(--cyan);
+           color: var(--black);
+           box-shadow: 0 6px 0 #0099bb;
+       }
+
+       .btn-cyan:active {
+           box-shadow: 0 2px 0 #0099bb;
+       }
+
+       .btn-red {
+           background: var(--red);
+           color: var(--white);
+           box-shadow: 0 6px 0 #990019;
+       }
+
+       .btn-red:active {
+           box-shadow: 0 2px 0 #990019;
+       }
+
+       .btn-yellow {
+           background: var(--yellow);
+           color: var(--black);
+           box-shadow: 0 6px 0 #cccc44;
+       }
+
+       .btn-yellow:active {
+           box-shadow: 0 2px 0 #cccc44;
+       }
+
+       .btn-green {
+           background: var(--green);
+           color: var(--white);
+           box-shadow: 0 6px 0 #059669;
+       }
+
+       .btn-green:active {
+           box-shadow: 0 2px 0 #059669;
+       }
+
+       .btn:disabled {
+           opacity: 0.5;
+           cursor: not-allowed;
+           transform: none !important;
+           box-shadow: 0 2px 0 #555 !important;
+       }
+
+       .btn-small {
+           font-size: 0.5rem;
+           padding: 12px 16px;
+       }
+
+       /* Drop Zones */
+       .drop-zone {
+           border: 4px dashed var(--cyan);
+           background: rgba(0, 217, 255, 0.1);
+           padding: 32px 16px;
+           text-align: center;
+           cursor: pointer;
+           transition: all 0.2s;
+           position: relative;
+           touch-action: manipulation;
+       }
+
+       .drop-zone.dragover {
+           background: rgba(0, 217, 255, 0.3);
+           border-color: var(--yellow);
+           transform: scale(1.02);
+       }
+
+       .drop-zone-icon {
+           font-size: 3rem;
+           margin-bottom: 8px;
+       }
+
+       .drop-zone-text {
+           font-family: 'Press Start 2P', cursive;
+           font-size: 0.6rem;
+           color: var(--cyan);
+           line-height: 1.6;
+       }
+
+       .drop-zone-hint {
+           font-size: 1rem;
+           color: var(--white);
+           opacity: 0.7;
+           margin-top: 8px;
+       }
+
+       .drop-zone-formats {
+           font-size: 0.8rem;
+           color: var(--yellow);
+           margin-top: 8px;
+           opacity: 0.8;
+       }
+
+       /* Stats */
+       .stats-grid {
+           display: grid;
+           grid-template-columns: repeat(2, 1fr);
+           gap: 12px;
+           margin-top: 12px;
+       }
+
+       .stat-box {
+           background: var(--black);
+           border: 2px solid var(--yellow);
+           padding: 12px;
+           text-align: center;
+       }
+
+       .stat-value {
+           font-family: 'Press Start 2P', cursive;
+           font-size: 1.2rem;
+           color: var(--cyan);
+       }
+
+       .stat-label {
+           font-size: 1rem;
+           color: var(--white);
+           margin-top: 4px;
+       }
+
+       .badge-container {
+           display: flex;
+           flex-wrap: wrap;
+           gap: 8px;
+           margin-top: 12px;
+       }
+
+       .badge {
+           font-family: 'Press Start 2P', cursive;
+           font-size: 0.5rem;
+           padding: 6px 10px;
+           background: var(--black);
+           border: 2px solid;
+       }
+
+       .badge-cyan { color: var(--cyan); border-color: var(--cyan); }
+       .badge-red { color: var(--red); border-color: var(--red); }
+       .badge-yellow { color: var(--yellow); border-color: var(--yellow); }
+       .badge-green { color: var(--green); border-color: var(--green); }
+
+       /* Controls */
+       .control-group {
+           margin: 16px 0;
+       }
+
+       .control-label {
+           display: flex;
+           justify-content: space-between;
+           align-items: center;
+           margin-bottom: 8px;
+           font-size: 1.1rem;
+       }
+
+       .control-value {
+           font-family: 'Press Start 2P', cursive;
+           font-size: 0.6rem;
+           color: var(--yellow);
+           background: var(--black);
+           padding: 4px 8px;
+           border: 2px solid var(--yellow);
+       }
+
+       input[type="range"] {
+           -webkit-appearance: none;
+           width: 100%;
+           height: 24px;
+           background: var(--black);
+           border: 2px solid var(--white);
+           outline: none;
+           cursor: pointer;
+           touch-action: none;
+           position: relative;
+       }
+
+       input[type="range"]::-webkit-slider-thumb {
+           -webkit-appearance: none;
+           width: 24px;
+           height: 24px;
+           background: var(--red);
+           border: 2px solid var(--white);
+           cursor: pointer;
+           box-shadow: -2px 0 0 var(--black), 2px 0 0 var(--black);
+           touch-action: none;
+       }
+
+       /* Slider zone indicators */
+       .slider-zones {
+           display: flex;
+           height: 4px;
+           margin-top: 4px;
+           margin-bottom: 8px;
+           border-radius: 2px;
+           overflow: hidden;
+       }
+
+       .slider-zone-green {
+           background: var(--green);
+           height: 100%;
+       }
+
+       .slider-zone-orange {
+           background: var(--orange);
+           height: 100%;
+       }
+
+       .slider-zone-red {
+           background: var(--red);
+           height: 100%;
+       }
+
+       .toggle-wrap {
+           display: flex;
+           align-items: center;
+           justify-content: space-between;
+           margin: 12px 0;
+       }
+
+       .toggle {
+           position: relative;
+           width: 60px;
+           height: 32px;
+           background: var(--black);
+           border: 2px solid var(--white);
+           cursor: pointer;
+           transition: all 0.2s;
+           touch-action: manipulation;
+       }
+
+       .toggle.active {
+           background: var(--cyan);
+           border-color: var(--cyan);
+       }
+
+       .toggle-slider {
+           position: absolute;
+           top: 2px;
+           left: 2px;
+           width: 24px;
+           height: 24px;
+           background: var(--white);
+           transition: transform 0.2s;
+           border: 2px solid var(--black);
+       }
+
+       .toggle.active .toggle-slider {
+           transform: translateX(28px);
+           background: var(--black);
+           border-color: var(--black);
+       }
+
+       select, input[type="text"] {
+           font-family: 'VT323', monospace;
+           font-size: 1.2rem;
+           width: 100%;
+           padding: 12px;
+           background: var(--black);
+           color: var(--white);
+           border: 2px solid var(--cyan);
+           outline: none;
+       }
+
+       select:focus, input[type="text"]:focus {
+           border-color: var(--yellow);
+       }
+
+       /* Canvas */
+       .canvas-panel {
+           background: var(--black);
+           border: 4px solid var(--red);
+           min-height: 300px;
+           display: flex;
+           align-items: center;
+           justify-content: center;
+           position: relative;
+           overflow: hidden;
+           width: 100%;
+       }
+
+       #mainCanvas {
+           max-width: 100%;
+           max-height: 60vh;
+           image-rendering: pixelated;
+           image-rendering: crisp-edges;
+       }
+
+       /* Progress */
+       .progress-overlay {
+           position: fixed;
+           top: 0;
+           left: 0;
+           right: 0;
+           bottom: 0;
+           background: rgba(10, 10, 10, 0.95);
+           display: flex;
+           flex-direction: column;
+           align-items: center;
+           justify-content: center;
+           z-index: 1000;
+           padding: 24px;
+           touch-action: none;
+       }
+
+       .progress-box {
+           background: var(--dark-gray);
+           border: 4px solid var(--cyan);
+           padding: 32px;
+           width: 100%;
+           max-width: 400px;
+           text-align: center;
+       }
+
+       .progress-title {
+           font-family: 'Press Start 2P', cursive;
+           font-size: 0.8rem;
+           color: var(--yellow);
+           margin-bottom: 24px;
+       }
+
+       .progress-bar-wrap {
+           width: 100%;
+           height: 32px;
+           background: var(--black);
+           border: 2px solid var(--white);
+           position: relative;
+           overflow: hidden;
+       }
+
+       .progress-bar-fill {
+           height: 100%;
+           background: linear-gradient(90deg, var(--cyan) 0%, var(--yellow) 100%);
+           transition: width 0.3s;
+           position: relative;
+       }
+
+       .progress-bar-fill::after {
+           content: '';
+           position: absolute;
+           top: 0;
+           left: 0;
+           right: 0;
+           bottom: 0;
+           background: repeating-linear-gradient(
+               90deg,
+               transparent,
+               transparent 10px,
+               rgba(0,0,0,0.2) 10px,
+               rgba(0,0,0,0.2) 20px
+           );
+       }
+
+       .progress-text {
+           font-family: 'Press Start 2P', cursive;
+           font-size: 0.7rem;
+           color: var(--cyan);
+           margin-top: 16px;
+       }
+
+       .progress-detail {
+           font-size: 1.2rem;
+           color: var(--white);
+           margin-top: 8px;
+       }
+
+       /* Empty State */
+       .empty-state {
+           text-align: center;
+           padding: 48px 24px;
+       }
+
+       .empty-icon {
+           font-size: 4rem;
+           margin-bottom: 16px;
+           animation: bounce 2s infinite;
+       }
+
+       @keyframes bounce {
+           0%, 100% { transform: translateY(0); }
+           50% { transform: translateY(-10px); }
+       }
+
+       .empty-title {
+           font-family: 'Press Start 2P', cursive;
+           font-size: 0.8rem;
+           color: var(--yellow);
+           margin-bottom: 8px;
+       }
+
+       .empty-text {
+           font-size: 1.2rem;
+           color: var(--white);
+           opacity: 0.7;
+       }
+
+       /* Tabs */
+       .tab-container {
+           display: flex;
+           gap: 8px;
+           margin-bottom: 16px;
+       }
+
+       .tab-btn {
+           flex: 1;
+           font-family: 'Press Start 2P', cursive;
+           font-size: 0.5rem;
+           padding: 12px 8px;
+           background: var(--black);
+           border: 2px solid var(--white);
+           color: var(--white);
+           cursor: pointer;
+           transition: all 0.2s;
+           touch-action: manipulation;
+       }
+
+       .tab-btn.active {
+           background: var(--cyan);
+           color: var(--black);
+           border-color: var(--cyan);
+       }
+
+       .tab-content {
+           display: none;
+       }
+
+       .tab-content.active {
+           display: block;
+       }
+
+       /* Messages */
+       .error-message {
+           color: var(--red);
+           font-size: 0.9rem;
+           margin-top: 8px;
+           padding: 8px;
+           background: rgba(230, 0, 38, 0.1);
+           border: 2px solid var(--red);
+       }
+
+       .success-message {
+           color: var(--cyan);
+           font-size: 0.9rem;
+           margin-top: 8px;
+           padding: 8px;
+           background: rgba(0, 217, 255, 0.1);
+           border: 2px solid var(--cyan);
+       }
+
+       .warning-badge {
+           background: rgba(230, 0, 38, 0.2);
+           border-color: var(--red);
+           color: var(--red);
+           font-size: 0.4rem;
+           padding: 4px 8px;
+       }
+
+       /* Export */
+       .export-options {
+           display: grid;
+           grid-template-columns: 1fr 1fr;
+           gap: 12px;
+           margin-top: 12px;
+       }
+
+       .export-btn {
+           font-size: 0.5rem;
+           padding: 12px 8px;
+       }
+
+       /* Universal Asset Loader Styles */
+       .asset-loader-controls {
+           display: flex;
+           flex-direction: column;
+           gap: 12px;
+           margin-bottom: 12px;
+       }
+
+       .source-select {
+           font-family: 'Press Start 2P', cursive;
+           font-size: 0.6rem;
+           padding: 12px;
+           background: var(--black);
+           color: var(--white);
+           border: 2px solid var(--cyan);
+           cursor: pointer;
+       }
+
+       .source-select option {
+           font-family: 'VT323', monospace;
+           font-size: 1rem;
+           background: var(--dark-gray);
+       }
+
+       .search-input-group {
+           display: flex;
+           gap: 8px;
+       }
+
+       .search-input {
+           flex: 1;
+           font-family: 'VT323', monospace;
+           font-size: 1.2rem;
+           padding: 12px;
+           background: var(--black);
+           color: var(--white);
+           border: 2px solid var(--cyan);
+       }
+
+       .search-btn {
+           width: auto;
+           padding: 12px 16px;
+           font-size: 0.5rem;
+       }
+
+       .loading-spinner {
+           display: inline-block;
+           width: 20px;
+           height: 20px;
+           border: 3px solid var(--cyan);
+           border-radius: 50%;
+           border-top-color: transparent;
+           animation: spin 1s linear infinite;
+           margin-left: 8px;
+           vertical-align: middle;
+       }
+
+       @keyframes spin {
+           to { transform: rotate(360deg); }
+       }
+
+       .asset-results {
+           max-height: 400px;
+           overflow-y: auto;
+           overflow-x: hidden;
+           border: 2px solid var(--cyan);
+           background: var(--black);
+           padding: 8px;
+           margin-top: 12px;
+       }
+
+       .asset-grid {
+           display: grid;
+           grid-template-columns: repeat(3, 1fr);
+           gap: 8px;
+       }
+
+       .asset-item {
+           position: relative;
+           aspect-ratio: 1;
+           cursor: pointer;
+           border: 2px solid transparent;
+           transition: all 0.2s;
+           overflow: hidden;
+           background: var(--dark-gray);
+       }
+
+       .asset-item:hover {
+           border-color: var(--yellow);
+           transform: scale(1.05);
+       }
+
+       .asset-item.selected {
+           border-color: var(--green);
+           box-shadow: 0 0 0 2px var(--green);
+       }
+
+       .asset-thumb {
+           width: 100%;
+           height: 100%;
+           object-fit: cover;
+           display: block;
+       }
+
+       .asset-overlay {
+           position: absolute;
+           bottom: 0;
+           left: 0;
+           right: 0;
+           background: rgba(0,0,0,0.8);
+           padding: 4px;
+           font-size: 0.6rem;
+           color: var(--white);
+           text-align: center;
+           opacity: 0;
+           transition: opacity 0.2s;
+           pointer-events: none;
+           font-family: 'Press Start 2P', cursive;
+       }
+
+       .asset-item:hover .asset-overlay {
+           opacity: 1;
+       }
+
+       .asset-source-badge {
+           position: absolute;
+           top: 4px;
+           right: 4px;
+           background: var(--cyan);
+           color: var(--black);
+           padding: 2px 6px;
+           font-size: 0.5rem;
+           font-family: 'Press Start 2P', cursive;
+           border-radius: 4px;
+       }
+
+       .dual-res-toggle {
+           display: flex;
+           align-items: center;
+           gap: 8px;
+           margin: 12px 0;
+           padding: 8px;
+           background: rgba(0, 217, 255, 0.1);
+           border: 2px solid var(--cyan);
+       }
+
+       .dual-res-toggle label {
+           font-size: 1rem;
+           color: var(--cyan);
+       }
+
+       /* Size Warning */
+       .size-warning {
+           background: rgba(230, 0, 38, 0.2);
+           border: 2px solid var(--red);
+           padding: 12px;
+           margin: 8px 0;
+           font-size: 0.9rem;
+           color: var(--red);
+       }
+
+       .size-warning strong {
+           color: var(--yellow);
+       }
+
+       /* NEW: Output Settings Panel Styles */
+       .output-readout {
+           background: var(--black);
+           border: 3px solid var(--cyan);
+           padding: 16px;
+           margin: 16px 0;
+           text-align: center;
+           font-family: 'Press Start 2P', cursive;
+           font-size: 0.65rem;
+           line-height: 1.6;
+       }
+
+       .output-readout.safe {
+           border-color: var(--green);
+           color: var(--green);
+       }
+
+       .output-readout.warning {
+           border-color: var(--orange);
+           color: var(--orange);
+       }
+
+       .output-readout.danger {
+           border-color: var(--red);
+           color: var(--red);
+           animation: pulse 1.5s infinite;
+       }
+
+       @keyframes pulse {
+           0%, 100% { opacity: 1; }
+           50% { opacity: 0.7; }
+       }
+
+       .output-dimensions {
+           font-size: 0.8rem;
+           margin-bottom: 4px;
+       }
+
+       .output-megapixels {
+           font-size: 1rem;
+           color: var(--yellow);
+       }
+
+       .memory-warning {
+           background: rgba(230, 0, 38, 0.2);
+           border: 2px solid var(--red);
+           color: var(--red);
+           padding: 12px;
+           margin-top: 12px;
+           font-family: 'VT323', monospace;
+           font-size: 1.1rem;
+           display: none;
+       }
+
+       .memory-warning.visible {
+           display: block;
+           animation: shake 0.5s;
+       }
+
+       @keyframes shake {
+           0%, 100% { transform: translateX(0); }
+           25% { transform: translateX(-5px); }
+           75% { transform: translateX(5px); }
+       }
+
+       .slider-container {
+           margin: 20px 0;
+       }
+
+       .slider-header {
+           display: flex;
+           justify-content: space-between;
+           align-items: center;
+           margin-bottom: 8px;
+       }
+
+       .slider-label {
+           font-family: 'Press Start 2P', cursive;
+           font-size: 0.6rem;
+           color: var(--white);
+       }
+
+       .slider-value {
+           font-family: 'Press Start 2P', cursive;
+           font-size: 0.7rem;
+           color: var(--yellow);
+           background: var(--black);
+           padding: 4px 8px;
+           border: 2px solid var(--yellow);
+       }
+
+       /* Target image info display */
+       .target-info {
+           background: var(--black);
+           border: 2px solid var(--cyan);
+           padding: 8px;
+           margin-top: 8px;
+           text-align: center;
+           font-family: 'VT323', monospace;
+           font-size: 1.1rem;
+           color: var(--cyan);
+       }
+
+       /* Asset selection controls */
+       .asset-selection-controls {
+           display: flex;
+           gap: 8px;
+           margin-bottom: 12px;
+           flex-wrap: wrap;
+       }
+
+       .asset-select-btn {
+           flex: 1;
+           min-width: 120px;
+           font-size: 0.5rem;
+           padding: 12px 8px;
+       }
+
+       /* Responsive */
+       @media (max-width: 768px) {
+           .game-header h1 {
+               font-size: 0.7rem;
+           }
+
+           .btn {
+               font-size: 0.6rem;
+               padding: 20px 16px;
+           }
+
+           .panel {
+               padding: 12px;
+           }
+
+           .stats-grid {
+               gap: 8px;
+           }
+
+           .stat-value {
+               font-size: 0.9rem;
+           }
+
+           .export-options {
+               grid-template-columns: 1fr;
+           }
+
+           .help-content {
+               padding: 16px;
+           }
+
+           .help-step {
+               flex-direction: column;
+               gap: 12px;
+           }
+
+           .asset-grid {
+               grid-template-columns: repeat(3, 1fr);
+           }
+
+           .search-input-group {
+               flex-direction: column;
+           }
+
+           .search-btn {
+               width: 100%;
+           }
+
+           .output-readout {
+               font-size: 0.55rem;
+           }
+
+           .output-dimensions {
+               font-size: 0.65rem;
+           }
+       }
+
+       @media (min-width: 1024px) {
+           .game-container {
+               flex-direction: row;
+               align-items: flex-start;
+           }
+
+           .controls-section {
+               width: 380px;
+               flex-shrink: 0;
+           }
+
+           .canvas-section {
+               flex: 1;
+               position: sticky;
+               top: 100px;
+           }
+
+           .canvas-panel {
+               min-height: 600px;
+           }
+
+           .asset-grid {
+               grid-template-columns: repeat(4, 1fr);
+           }
+       }
+
+       @media (hover: none) and (pointer: coarse) {
+           .btn {
+               padding: 20px 24px;
+           }
+
+           input[type="range"] {
+               height: 32px;
+           }
+
+           input[type="range"]::-webkit-slider-thumb {
+               width: 32px;
+               height: 32px;
+           }
+       }
+
+       .hidden { display: none !important; }
+   </style>
+<base target="_blank">
+</head>
+<body>
+
+<div id="workerStatus" style="
+position:fixed;
+bottom:10px;
+right:10px;
+padding:6px 10px;
+background:#111;
+color:#fff;
+font-size:12px;
+border-radius:6px;
+z-index:9999;
+opacity:0.8;">
+Initializing...
+</div>
+
+   <!-- Menu Overlay -->
+   <div class="menu-overlay" id="menuOverlay" onclick="closeMenu()"></div>
+
+   <!-- Side Menu -->
+   <nav class="side-menu" id="sideMenu">
+       <div class="menu-header">
+           <div class="menu-title">📋 MENU</div>
+           <button class="menu-close" onclick="closeMenu()">✕</button>
+       </div>
+
+       <div class="menu-section">
+           <div class="menu-section-title">🎯 GET STARTED</div>
+           <div class="menu-item" onclick="openHelp('quickstart')">
+               <div class="menu-item-icon">🚀</div>
+               <div class="menu-item-text">
+                   <div class="menu-item-title">Quick Start Guide</div>
+                   <div class="menu-item-desc">Learn the basics in 3 steps</div>
+               </div>
+           </div>
+           <div class="menu-item" onclick="openHelp('tips')">
+               <div class="menu-item-icon">💡</div>
+               <div class="menu-item-text">
+                   <div class="menu-item-title">Pro Tips</div>
+                   <div class="menu-item-desc">Get the best results</div>
+               </div>
+           </div>
+       </div>
+
+       <div class="menu-section">
+           <div class="menu-section-title">📚 HELP & INFO</div>
+           <div class="menu-item" onclick="openHelp('formats')">
+               <div class="menu-item-icon">🖼️</div>
+               <div class="menu-item-text">
+                   <div class="menu-item-title">Supported Formats</div>
+                   <div class="menu-item-desc">What files you can use</div>
+               </div>
+           </div>
+           <div class="menu-item" onclick="openHelp('settings')">
+               <div class="menu-item-icon">⚙️</div>
+               <div class="menu-item-text">
+                   <div class="menu-item-title">Settings Guide</div>
+                   <div class="menu-item-desc">Understand all options</div>
+               </div>
+           </div>
+           <div class="menu-item" onclick="openHelp('troubleshooting')">
+               <div class="menu-item-icon">🔧</div>
+               <div class="menu-item-text">
+                   <div class="menu-item-title">Troubleshooting</div>
+                   <div class="menu-item-desc">Fix common issues</div>
+               </div>
+           </div>
+       </div>
+   </nav>
+
+   <!-- Help Modal -->
+   <div class="help-modal" id="helpModal">
+       <div class="help-content">
+           <div class="help-header">
+               <div class="help-title" id="helpTitle">📖 HELP</div>
+               <button class="help-close" onclick="closeHelp()">✕ CLOSE</button>
+           </div>
+
+           <div id="helpContent">
+               <!-- Content loaded dynamically -->
+           </div>
+       </div>
+   </div>
+
+   <!-- Header -->
+   <header class="game-header">
+       <button class="menu-btn" onclick="openMenu()">☰ MENU</button>
+       <h1>🎨 PhotoMosaic Studio 🎨</h1>
+       <button class="menu-btn" onclick="openHelp('quickstart')" style="font-size: 0.5rem; padding: 8px;">❓</button>
+   </header>
+
+   <!-- Main Container -->
+   <div class="game-container">
+
+       <!-- Controls Section -->
+       <div class="controls-section">
+
+           <!-- Quick Start Banner -->
+           <div class="quick-start" id="quickStartBanner">
+               <h2>👋 NEW HERE?</h2>
+               <p>1. Upload tile images → 2. Upload target → 3. Configure Output → 4. Generate!</p>
+               <button class="quick-start-btn" onclick="openHelp('quickstart')">📖 READ GUIDE</button>
+           </div>
+
+           <!-- Tile Library Panel -->
+           <div class="panel panel-cyan">
+               <button class="panel-help" onclick="openHelp('tiles')">?</button>
+               <div class="panel-title">Image Source</div>
+
+               <!-- Tabs -->
+               <div class="tab-container">
+                   <button class="tab-btn active" onclick="switchTab('upload')">📁 Upload</button>
+                   <button class="tab-btn" onclick="switchTab('universal')">🌐 Universal</button>
+               </div>
+
+               <!-- Upload Tab -->
+               <div id="upload-tab" class="tab-content active">
+                   <div id="tileDropZone" class="drop-zone">
+                       <div class="drop-zone-icon">📁</div>
+                       <div class="drop-zone-text">DROP IMAGES HERE<br>OR TAP TO BROWSE</div>
+                       <div class="drop-zone-hint">Select multiple images or a folder</div>
+                       <div class="drop-zone-formats">JPG, PNG, WebP, GIF, BMP, TIFF</div>
+                   </div>
+                   <input type="file" id="folderInput" webkitdirectory directory multiple accept="image/*" class="hidden">
+                   <input type="file" id="fileInput" multiple accept="image/*" class="hidden">
+                   <div id="uploadError" class="error-message hidden"></div>
+                   <div id="uploadWarning" class="warning-badge hidden" style="margin-top: 8px;"></div>
+               </div>
+
+               <!-- Universal Asset Loader Tab -->
+               <div id="universal-tab" class="tab-content">
+                   <div class="asset-loader-controls">
+                       <select id="assetSource" class="source-select">
+                           <option value="met">🏛️ The Met</option>
+                           <option value="nasa">🚀 NASA (Space)</option>
+                           
+                           <option value="comics">💥 Comic Covers (Archive.org)</option>
+                           <option value="loc">✈️ Travel Posters (Library of Congress)</option>
+                           <option value="openlibrary">📚 Book Covers (Open Library)</option>
+                       </select>
+
+                       <div class="search-input-group">
+                           <input type="text" id="assetSearchInput" class="search-input" 
+                                  placeholder="Search for assets...">
+                           <button class="btn btn-cyan search-btn" id="assetSearchBtn" onclick="searchAssets()">
+                               🔍 SEARCH
+                           </button>
+                       </div>
+
+                       <!-- Dual Resolution Toggle -->
+                       <div class="dual-res-toggle">
+                           <input type="checkbox" id="dualResToggle" checked>
+                           <label for="dualResToggle">Use High-Res Images (when available)</label>
+                       </div>
+                   </div>
+
+                   <div id="assetResults" class="asset-results hidden">
+                       <!-- Results populated here -->
+                   </div>
+
+                   <div id="assetStatus" style="font-size: 1rem; color: var(--cyan); margin: 8px 0; min-height: 24px;">
+                       <span id="assetStatusText"></span>
+                       <span id="assetSpinner" class="loading-spinner hidden"></span>
+                   </div>
+                   <div id="assetError" class="error-message hidden"></div>
+
+                   <button class="btn btn-yellow btn-small hidden" id="assetDownloadBtn" onclick="downloadSelectedAssets()">
+                       ⬇️ DOWNLOAD & PROCESS
+                   </button>
+               </div>
+
+               <div class="stats-grid" id="tileStats" style="display: none;">
+                   <div class="stat-box">
+                       <div class="stat-value" id="tileCount">0</div>
+                       <div class="stat-label">TILES</div>
+                   </div>
+                   <div class="stat-box">
+                       <div class="stat-value" id="aspectCount">0</div>
+                       <div class="stat-label">RATIOS</div>
+                   </div>
+               </div>
+
+               <div class="badge-container hidden" id="aspectBadges"></div>
+           </div>
+
+           <!-- Target Image Panel -->
+           <div class="panel panel-red">
+               <button class="panel-help" onclick="openHelp('target')">?</button>
+               <div class="panel-title">Target Image</div>
+
+               <div id="targetDropZone" class="drop-zone" style="padding: 24px 16px;">
+                   <div class="drop-zone-icon">🖼️</div>
+                   <div class="drop-zone-text">DROP TARGET IMAGE<br>OR TAP HERE</div>
+                   <div class="drop-zone-hint">This is the photo you want to recreate</div>
+               </div>
+               <input type="file" id="targetInput" accept="image/*" class="hidden">
+               <div id="targetError" class="error-message hidden"></div>
+               <div id="targetWarning" class="warning-badge hidden" style="margin-top: 8px;"></div>
+
+               <div id="targetPreviewWrap" class="hidden" style="margin-top: 12px;">
+                   <img id="targetPreview" style="width: 100%; height: 120px; object-fit: cover; border: 2px solid var(--red);">
+                   <div id="targetInfo" class="target-info hidden"></div>
+               </div>
+           </div>
+
+           <!-- Output Settings Panel -->
+           <div class="panel panel-purple">
+               <button class="panel-help" onclick="openHelp('output')">?</button>
+               <div class="panel-title">Output Settings</div>
+
+               <!-- Slider 1: Detail (Tiles Across) -->
+               <div class="slider-container">
+                   <div class="slider-header">
+                       <span class="slider-label">📊 Detail (Tiles Across)</span>
+                       <span class="slider-value" id="tilesAcrossVal">50</span>
+                   </div>
+                   <input type="range" id="tilesAcross" min="20" max="200" value="50" step="1">
+                   <!-- Zone indicators: 75% green (20-150), 15% orange (151-180), 10% red (181-200) -->
+                   <div class="slider-zones">
+                       <div class="slider-zone-green" style="width: 75%;"></div>
+                       <div class="slider-zone-orange" style="width: 15%;"></div>
+                       <div class="slider-zone-red" style="width: 10%;"></div>
+                   </div>
+                   <div style="display: flex; justify-content: space-between; font-size: 0.7rem; color: var(--cyan); margin-top: 4px;">
+                       <span>20 (Low)</span>
+                       <span>200 (Ultra)</span>
+                   </div>
+               </div>
+
+               <!-- Slider 2: Tile Quality -->
+               <div class="slider-container">
+                   <div class="slider-header">
+                       <span class="slider-label">🔍 Tile Quality (Pixels)</span>
+                       <span class="slider-value" id="tileQualityVal">64px</span>
+                   </div>
+                   <input type="range" id="tileQuality" min="32" max="256" value="64" step="16">
+                   <!-- Zone indicators: 75% green (32-192), 12.5% orange (193-224), 12.5% red (225-256) -->
+                   <div class="slider-zones">
+                       <div class="slider-zone-green" style="width: 75%;"></div>
+                       <div class="slider-zone-orange" style="width: 12.5%;"></div>
+                       <div class="slider-zone-red" style="width: 12.5%;"></div>
+                   </div>
+                   <div style="display: flex; justify-content: space-between; font-size: 0.7rem; color: var(--cyan); margin-top: 4px;">
+                       <span>32px</span>
+                       <span>256px</span>
+                   </div>
+               </div>
+
+               <!-- Real-time Status Readout -->
+               <div class="output-readout safe" id="outputReadout">
+                   <div class="output-dimensions" id="outputDimensions">3200 x 3200</div>
+                   <div class="output-megapixels" id="outputMegapixels">10.2 MP</div>
+               </div>
+
+               <!-- Memory Warning -->
+               <div class="memory-warning" id="memoryWarning">
+                   ⚠️ <strong>Warning:</strong> High resolution settings. May crash on some devices.
+               </div>
+
+               <!-- Aspect Ratio Mode -->
+               <div class="control-group" style="margin-top: 16px;">
+                   <div class="control-label">
+                       <span>Aspect Mode</span>
+                   </div>
+                   <select id="aspectMode">
+                       <option value="crop-center">📍 CROP CENTER</option>
+                       <option value="crop-smart">🎯 SMART CROP</option>
+                       <option value="letterbox">📐 LETTERBOX</option>
+                       <option value="stretch">↔️ STRETCH</option>
+                   </select>
+               </div>
+           </div>
+
+           <!-- Smart Selection Panel -->
+           <div class="panel">
+               <button class="panel-help" onclick="openHelp('smart')">?</button>
+               <div class="panel-title">Smart Selection</div>
+
+               <div class="toggle-wrap">
+                   <span style="font-size: 1.2rem;">2×2 Structural Match</span>
+                   <div class="toggle active" id="structuralToggle" onclick="toggleSwitch(this)">
+                       <div class="toggle-slider"></div>
+                   </div>
+               </div>
+
+               <div class="control-group" style="margin-top: 16px;">
+                   <div class="control-label">
+                       <span>Duplicate Spacing</span>
+                       <span class="control-value" id="spacingVal">5</span>
+                   </div>
+                   <input type="range" id="duplicateSpacing" min="0" max="20" value="5" step="1">
+               </div>
+
+               <div class="control-group">
+                   <div class="control-label">
+                       <span>Max Usage</span>
+                       <span class="control-value" id="capVal">∞</span>
+                   </div>
+                   <input type="range" id="maxDuplication" min="0" max="100" value="0" step="5">
+               </div>
+
+               <div class="control-group">
+                   <div class="control-label">
+                       <span>Variety</span>
+                       <span class="control-value" id="varietyVal">5</span>
+                   </div>
+                   <input type="range" id="varietyK" min="1" max="20" value="5" step="1">
+               </div>
+
+               <div class="toggle-wrap">
+                   <span style="font-size: 1.2rem;">Allow Rotations</span>
+                   <div class="toggle" id="transformToggle" onclick="toggleSwitch(this)">
+                       <div class="toggle-slider"></div>
+                   </div>
+               </div>
+
+               <div class="control-group">
+                   <div class="control-label">
+                       <span>Original Blend</span>
+                       <span class="control-value" id="blendVal">0%</span>
+                   </div>
+                   <input type="range" id="blendOpacity" min="0" max="100" value="0" step="5">
+               </div>
+           </div>
+
+           <button class="btn btn-cyan" id="generateBtn" disabled>
+               ▶ GENERATE MOSAIC
+           </button>
+       </div>
+
+       <!-- Canvas Section -->
+       <div class="canvas-section">
+           <div class="canvas-panel" id="canvasPanel">
+
+               <div class="empty-state" id="emptyState">
+                   <div class="empty-icon">🎨</div>
+                   <div class="empty-title">READY TO CREATE</div>
+                   <div class="empty-text">Load tiles and target to begin!</div>
+               </div>
+
+               <canvas id="mainCanvas" class="hidden"></canvas>
+
+               <div id="statsOverlay" class="hidden" style="position: absolute; top: 8px; right: 8px; background: var(--black); border: 2px solid var(--cyan); padding: 8px; font-family: 'Press Start 2P'; font-size: 0.5rem;">
+                   <span style="color: var(--cyan);" id="resText">0×0</span>
+               </div>
+           </div>
+
+           <!-- Export Panel -->
+           <div id="exportPanel" class="panel panel-green hidden" style="margin-top: 16px;">
+               <div class="panel-title">Export Mosaic</div>
+
+               <!-- Size Warning -->
+               <div id="sizeWarning" class="size-warning hidden">
+                   <strong>⚠️ Large Image Warning:</strong> This mosaic is very large and may fail to download on some browsers. 
+                   Try exporting at a lower resolution or using the "Copy" button instead.
+               </div>
+
+               <div class="control-group">
+                   <div class="control-label">
+                       <span>Output Resolution</span>
+                       <span class="control-value" id="exportResVal">Original</span>
+                   </div>
+                   <select id="exportResolution">
+                       <option value="original">📐 ORIGINAL SIZE</option>
+                       <option value="1080">📱 1080p (FHD)</option>
+                       <option value="1440">🖥️ 1440p (2K)</option>
+                       <option value="2160">🖥️ 2160p (4K)</option>
+                       <option value="0.5">🔽 50% Scale</option>
+                       <option value="0.25">🔽 25% Scale</option>
+                   </select>
+               </div>
+
+               <div class="control-group">
+                   <div class="control-label">
+                       <span>Output Format</span>
+                   </div>
+                   <select id="exportFormat">
+                       <option value="image/png">🖼️ PNG (Lossless)</option>
+                       <option value="image/jpeg">📷 JPEG (Compressed)</option>
+                       <option value="image/webp">🌐 WebP (Modern)</option>
+                   </select>
+               </div>
+
+               <div class="control-group">
+                   <div class="control-label">
+                       <span>Quality (JPEG/WebP)</span>
+                       <span class="control-value" id="qualityVal">90%</span>
+                   </div>
+                   <input type="range" id="exportQuality" min="10" max="100" value="90" step="5">
+               </div>
+
+               <div class="export-options">
+                   <button class="btn btn-green export-btn" onclick="exportMosaic()">
+                       💾 DOWNLOAD
+                   </button>
+                   <button class="btn btn-cyan export-btn" onclick="copyToClipboard()">
+                       📋 COPY
+                   </button>
+               </div>
+           </div>
+       </div>
+   </div>
+
+   <!-- Progress Overlay -->
+   <div id="progressOverlay" class="progress-overlay hidden">
+       <div class="progress-box">
+           <div class="progress-title" id="progressTitle">LOADING...</div>
+           <div class="progress-bar-wrap">
+               <div class="progress-bar-fill" id="progressBar" style="width: 0%"></div>
+           </div>
+           <div class="progress-text" id="progressPercent">0%</div>
+           <div class="progress-detail" id="progressDetail">Preparing...</div>
+       </div>
+   </div>
+
+   <script>
+
+       
+
+// ==========================================
+// ADVANCED WEB WORKER MOSAIC PROCESSING
+// ==========================================
+
+const WORKER_SUPPORTED = typeof Worker !== 'undefined' && typeof OffscreenCanvas !== 'undefined';
+
+let mosaicWorker = null;
+
+function initWorker() {
+    if (!WORKER_SUPPORTED) return null;
+
+    const workerBlob = new Blob([`
+        self.onmessage = async function(e) {
+            const { imageData, tileSize } = e.data;
+
+            const width = imageData.width;
+            const height = imageData.height;
+
+            const canvas = new OffscreenCanvas(width, height);
+            const ctx = canvas.getContext('2d');
+            ctx.putImageData(imageData, 0, 0);
+
+            const imgData = ctx.getImageData(0, 0, width, height);
+            const data = imgData.data;
+
+            for (let y = 0; y < height; y += tileSize) {
+                for (let x = 0; x < width; x += tileSize) {
+
+                    let r=0,g=0,b=0,count=0;
+
+                    for (let yy = y; yy < y+tileSize && yy < height; yy++) {
+                        for (let xx = x; xx < x+tileSize && xx < width; xx++) {
+                            const i = (yy*width + xx)*4;
+                            r += data[i];
+                            g += data[i+1];
+                            b += data[i+2];
+                            count++;
+                        }
+                    }
+
+                    r = r/count;
+                    g = g/count;
+                    b = b/count;
+
+                    for (let yy = y; yy < y+tileSize && yy < height; yy++) {
+                        for (let xx = x; xx < x+tileSize && xx < width; xx++) {
+                            const i = (yy*width + xx)*4;
+                            data[i] = r;
+                            data[i+1] = g;
+                            data[i+2] = b;
+                        }
+                    }
+                }
+            }
+
+            ctx.putImageData(imgData, 0, 0);
+            const result = canvas.transferToImageBitmap();
+            self.postMessage({ bitmap: result }, [result]);
+        };
+    `], { type: 'application/javascript' });
+
+    mosaicWorker = new Worker(URL.createObjectURL(workerBlob));
+    return mosaicWorker;
+}
+
+function updateWorkerStatus() {
+    const el = document.getElementById("workerStatus");
+    if (!el) return;
+
+    if (WORKER_SUPPORTED) {
+        el.textContent = "Worker Mode: Enabled (Desktop Optimized)";
+        el.style.background = "#065f46";
+    } else {
+        el.textContent = "Worker Mode: Fallback (Mobile Safe)";
+        el.style.background = "#7c2d12";
+    }
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+    if (WORKER_SUPPORTED) initWorker();
+    updateWorkerStatus();
+});
+
+
+async function runMosaicWithOptimization(ctx, width, height, tileSize) {
+
+    const imageData = ctx.getImageData(0, 0, width, height);
+
+    if (WORKER_SUPPORTED && mosaicWorker) {
+
+        return new Promise((resolve) => {
+            mosaicWorker.onmessage = function(e) {
+                ctx.clearRect(0, 0, width, height);
+                ctx.drawImage(e.data.bitmap, 0, 0);
+                resolve();
+            };
+
+            mosaicWorker.postMessage({
+                imageData: imageData,
+                tileSize: tileSize || 10
+            });
+        });
+
+    } else {
+
+        // Mobile fallback with chunked processing
+        const data = imageData.data;
+
+        for (let y = 0; y < height; y += tileSize) {
+            await new Promise(r => setTimeout(r, 0));
+
+            for (let x = 0; x < width; x += tileSize) {
+
+                let r=0,g=0,b=0,count=0;
+
+                for (let yy = y; yy < y+tileSize && yy < height; yy++) {
+                    for (let xx = x; xx < x+tileSize && xx < width; xx++) {
+                        const i = (yy*width + xx)*4;
+                        r += data[i];
+                        g += data[i+1];
+                        b += data[i+2];
+                        count++;
+                    }
+                }
+
+                r = r/count;
+                g = g/count;
+                b = b/count;
+
+                for (let yy = y; yy < y+tileSize && yy < height; yy++) {
+                    for (let xx = x; xx < x+tileSize && xx < width; xx++) {
+                        const i = (yy*width + xx)*4;
+                        data[i] = r;
+                        data[i+1] = g;
+                        data[i+2] = b;
+                    }
+                }
+            }
+        }
+
+        ctx.putImageData(imageData, 0, 0);
+    }
+}
+
+</script>
+</body>
+</html>
